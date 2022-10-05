@@ -84,6 +84,7 @@ export default class ModalPortal extends Component {
 
     this.shouldClose = null;
     this.moveFromContentToOverlay = null;
+    this.shouldCleanupDOM = false;
   }
 
   componentDidMount() {
@@ -127,6 +128,7 @@ export default class ModalPortal extends Component {
   }
 
   componentWillUnmount() {
+    this.cleanupDOM();
     if (this.state.isOpen) {
       this.afterClose();
     }
@@ -144,32 +146,9 @@ export default class ModalPortal extends Component {
     this.props.contentRef && this.props.contentRef(content);
   };
 
-  beforeOpen() {
-    const {
-      appElement,
-      ariaHideApp,
-      htmlOpenClassName,
-      bodyOpenClassName
-    } = this.props;
+  cleanupDOM () {
+    if (!this.shouldCleanupDOM) return;
 
-    // Add classes.
-    bodyOpenClassName && classList.add(document.body, bodyOpenClassName);
-
-    htmlOpenClassName &&
-      classList.add(
-        document.getElementsByTagName("html")[0],
-        htmlOpenClassName
-      );
-
-    if (ariaHideApp) {
-      ariaHiddenInstances += 1;
-      ariaAppHider.hide(appElement);
-    }
-
-    portalOpenInstances.register(this);
-  }
-
-  afterClose = () => {
     const {
       appElement,
       ariaHideApp,
@@ -194,6 +173,46 @@ export default class ModalPortal extends Component {
         ariaAppHider.show(appElement);
       }
     }
+
+    this.shouldCleanupDOM = false;
+  }
+
+  beforeOpen() {
+    const {
+      appElement,
+      ariaHideApp,
+      htmlOpenClassName,
+      bodyOpenClassName
+    } = this.props;
+
+      // Add classes.
+      bodyOpenClassName && classList.add(document.body, bodyOpenClassName);
+
+      htmlOpenClassName &&
+        classList.add(
+          document.getElementsByTagName("html")[0],
+          htmlOpenClassName
+        );
+
+      if (ariaHideApp) {
+        ariaHiddenInstances += 1;
+        ariaAppHider.hide(appElement);
+      }
+
+      this.shouldCleanupDOM = true;
+
+      portalOpenInstances.register(this);
+  }
+
+  afterClose = () => {
+    const {
+      appElement,
+      ariaHideApp,
+      htmlOpenClassName,
+      bodyOpenClassName
+    } = this.props;
+
+    this.cleanupDOM();
 
     if (this.props.shouldFocusAfterRender) {
       if (this.props.shouldReturnFocusAfterClose) {
